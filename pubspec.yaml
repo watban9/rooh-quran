@@ -2,6 +2,7 @@
 name: rooh_quran
 description: تطبيق رَوْح للقرآن الكريم
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
@@ -10,9 +11,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
   cupertino_icons: ^1.0.8
   http: ^1.2.2
   shared_preferences: ^2.3.2
+  dio: ^5.8.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
@@ -21,6 +25,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/data/
     - assets/quran_pages/
