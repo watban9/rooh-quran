@@ -7,6 +7,6 @@ class QuranPages {
       throw RangeError.range(page, 1, totalPages, 'page');
     }
 
-    return 'assets/quran_pages/page_${page.toString().padLeft(3, '0')}.png';
+    return 'assets/quran_pages/$page.png';
   }
 }
