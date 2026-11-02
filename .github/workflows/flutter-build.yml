@@ -28,6 +28,10 @@ jobs:
       - name: Create Flutter project
         run: flutter create --project-name rooh_quran .
 
+      - name: Add Internet Permission
+        run: |
+          sed -i '/<application/i\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+
       - name: Set App Display Name
         run: |
           sed -i 's/android:label="[^"]*"/android:label="رَوْح | ROOH"/' android/app/src/main/AndroidManifest.xml
