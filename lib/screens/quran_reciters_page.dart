@@ -705,4 +705,14 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                   backgroundColor: reciterForest,
                   foregroundColor: reciterGold,
                   shape: RoundedRectangleBorder(
-                    bord
+                                        borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
