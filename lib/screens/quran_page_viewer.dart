@@ -1,670 +1,372 @@
-
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../services/audio_download_service.dart';
-import '../services/quran_local_service.dart';
+import '../data/quran_pages.dart';
 
-const Color reciterForest = Color(0xFF0B3D2E);
-const Color reciterGreen = Color(0xFF176B4D);
-const Color reciterGold = Color(0xFFD6B15E);
-const Color reciterCream = Color(0xFFF8F7F1);
+const Color forest = Color(0xFF0B3D2E);
+const Color gold = Color(0xFFD6B15E);
+const Color cream = Color(0xFFF8F7F1);
 
-class QuranReciter {
-  final String name;
-  final String folder;
+class QuranPageViewer extends StatefulWidget {
+  final int initialPage;
 
-  const QuranReciter({
-    required this.name,
-    required this.folder,
+  const QuranPageViewer({
+    super.key,
+    this.initialPage = 1,
   });
-}
-
-class QuranRecitersPage extends StatefulWidget {
-  const QuranRecitersPage({super.key});
 
   @override
-  State<QuranRecitersPage> createState() =>
-      _QuranRecitersPageState();
+  State<QuranPageViewer> createState() =>
+      _QuranPageViewerState();
 }
 
-class _QuranRecitersPageState extends State<QuranRecitersPage> {
-  final AudioPlayer player = AudioPlayer();
+class _QuranPageViewerState extends State<QuranPageViewer> {
+  late final PageController _pageController;
 
-  final List<QuranReciter> reciters = const [
-    QuranReciter(
-      name: 'مشاري العفاسي',
-      folder: 'Alafasy_128kbps',
-    ),
-    QuranReciter(
-      name: 'عبد الرحمن السديس',
-      folder: 'Abdurrahmaan_As-Sudais_192kbps',
-    ),
-    QuranReciter(
-      name: 'ماهر المعيقلي',
-      folder: 'MaherAlMuaiqly128kbps',
-    ),
-    QuranReciter(
-      name: 'عبد الباسط عبد الصمد',
-      folder: 'Abdul_Basit_Murattal_192kbps',
-    ),
-    QuranReciter(
-      name: 'محمود خليل الحصري',
-      folder: 'Husary_128kbps',
-    ),
-  ];
-
-  List<QuranSurah> surahs = [];
-
-  int selectedReciter = 0;
-  int selectedSurah = 1;
-
-  bool loading = true;
-  bool downloading = false;
-  double downloadProgress = 0;
-
-  String statusMessage = 'اختر القارئ والسورة للاستماع';
+  int currentPage = 1;
 
   @override
   void initState() {
     super.initState();
-    loadData();
+
+    currentPage = widget.initialPage.clamp(
+      1,
+      QuranPages.totalPages,
+    );
+
+    _pageController = PageController(
+      initialPage: currentPage - 1,
+    );
+
+    _loadLastPage();
   }
 
-  Future<void> loadData() async {
-    try {
-      final loaded = await QuranLocalService.loadSurahs();
-      final prefs = await SharedPreferences.getInstance();
-
-      if (!mounted) return;
-
-      setState(() {
-        surahs = loaded;
-        selectedReciter = (prefs.getInt('lastReciter') ?? 0)
-            .clamp(0, reciters.length - 1);
-        selectedSurah = (prefs.getInt('lastAudioSurah') ?? 1)
-            .clamp(1, 114);
-        loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        loading = false;
-        statusMessage = 'تعذر تحميل بيانات القرآن';
-      });
-    }
-  }
-
-  Future<void> saveSelection() async {
+  Future<void> _loadLastPage() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('lastReciter', selectedReciter);
-    await prefs.setInt('lastAudioSurah', selectedSurah);
-  }
 
-  String audioFileName(int surah, int ayah) {
-    final s = surah.toString().padLeft(3, '0');
-    final a = ayah.toString().padLeft(3, '0');
+    final savedPage = prefs.getInt('lastQuranPage');
 
-    return '${reciters[selectedReciter].folder}_${s}_$a.mp3';
-  }
+    if (!mounted || savedPage == null) return;
 
-  String audioUrl(int surah, int ayah) {
-    final s = surah.toString().padLeft(3, '0');
-    final a = ayah.toString().padLeft(3, '0');
-
-    return 'https://everyayah.com/data/'
-        '${reciters[selectedReciter].folder}/$s$a.mp3';
-  }
-
-  Future<Uri> getAyahUri(
-    QuranAyah ayah,
-    Directory directory,
-  ) async {
-    final fileName = audioFileName(
-      ayah.surahNumber,
-      ayah.ayahNumber,
+    final page = savedPage.clamp(
+      1,
+      QuranPages.totalPages,
     );
-
-    final file = File('${directory.path}/rooh_audio/$fileName');
-
-    if (await file.exists()) {
-      return Uri.file(file.path);
-    }
-
-    return Uri.parse(
-      audioUrl(ayah.surahNumber, ayah.ayahNumber),
-    );
-  }
-
-  Future<void> playSurah() async {
-    if (surahs.isEmpty) return;
-
-    try {
-      await saveSelection();
-
-      setState(() {
-        statusMessage = 'جاري تجهيز التلاوة...';
-      });
-
-      await player.stop();
-
-      final surah = surahs[selectedSurah - 1];
-      final directory = await getApplicationDocumentsDirectory();
-
-      final sources = <AudioSource>[];
-
-      for (final ayah in surah.ayahs) {
-        final uri = await getAyahUri(ayah, directory);
-        sources.add(AudioSource.uri(uri));
-      }
-
-      final playlist = ConcatenatingAudioSource(
-        children: sources,
-      );
-
-      await player.setAudioSource(playlist);
-      await player.play();
-
-      if (!mounted) return;
-
-      setState(() {
-        statusMessage =
-            'تلاوة سورة ${surah.name} بصوت ${reciters[selectedReciter].name}';
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        statusMessage =
-            'تعذر تشغيل التلاوة. تحقق من اتصال الإنترنت.';
-      });
-    }
-  }
-
-  Future<void> downloadSurah() async {
-    if (surahs.isEmpty || downloading) return;
-
-    final surah = surahs[selectedSurah - 1];
 
     setState(() {
-      downloading = true;
-      downloadProgress = 0;
-      statusMessage = 'جاري تنزيل سورة ${surah.name}...';
+      currentPage = page;
     });
 
-    try {
-      int completed = 0;
+    _pageController.jumpToPage(page - 1);
+  }
 
-      for (final ayah in surah.ayahs) {
-        final fileName = audioFileName(
-          ayah.surahNumber,
-          ayah.ayahNumber,
-        );
+  Future<void> _savePage(int page) async {
+    final prefs = await SharedPreferences.getInstance();
 
-        final exists =
-            await AudioDownloadService.isDownloaded(fileName);
+    await prefs.setInt('lastQuranPage', page);
+  }
 
-        if (!exists) {
-          await AudioDownloadService.downloadAudio(
-            url: audioUrl(
-              ayah.surahNumber,
-              ayah.ayahNumber,
+  void _onPageChanged(int index) {
+    final page = index + 1;
+
+    setState(() {
+      currentPage = page;
+    });
+
+    _savePage(page);
+  }
+
+  void _goToPage(int page) {
+    final safePage = page.clamp(
+      1,
+      QuranPages.totalPages,
+    );
+
+    _pageController.animateToPage(
+      safePage - 1,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _nextPage() {
+    if (currentPage < QuranPages.totalPages) {
+      _goToPage(currentPage + 1);
+    }
+  }
+
+  void _previousPage() {
+    if (currentPage > 1) {
+      _goToPage(currentPage - 1);
+    }
+  }
+
+  Future<void> _showPagePicker() async {
+    final controller = TextEditingController(
+      text: currentPage.toString(),
+    );
+
+    final selectedPage = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('الانتقال إلى صفحة'),
+            content: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'رقم الصفحة من 1 إلى 604',
+                border: OutlineInputBorder(),
+              ),
             ),
-            fileName: fileName,
-            onProgress: null,
-          );
-        }
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('إلغاء'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: forest,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  final page = int.tryParse(
+                    controller.text.trim(),
+                  );
 
-        completed++;
+                  if (page == null ||
+                      page < 1 ||
+                      page > QuranPages.totalPages) {
+                    ScaffoldMessenger.of(dialogContext)
+                        .showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'أدخل رقم صفحة صحيح من 1 إلى 604',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
 
-        if (!mounted) return;
+                  Navigator.pop(dialogContext, page);
+                },
+                child: const Text('انتقال'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
 
-        setState(() {
-          downloadProgress = completed / surah.ayahs.length;
-        });
-      }
+    controller.dispose();
 
-      if (!mounted) return;
-
-      setState(() {
-        statusMessage = 'تم تنزيل سورة ${surah.name} للاستماع دون إنترنت';
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('اكتمل تنزيل السورة بنجاح'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        statusMessage = 'فشل التنزيل. تحقق من اتصال الإنترنت.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          downloading = false;
-        });
-      }
+    if (selectedPage != null) {
+      _goToPage(selectedPage);
     }
-  }
-
-  Future<void> changeSurah(int? value) async {
-    if (value == null) return;
-
-    await player.stop();
-
-    setState(() {
-      selectedSurah = value;
-      statusMessage = 'تم اختيار سورة ${surahs[value - 1].name}';
-    });
-
-    await saveSelection();
-  }
-
-  Future<void> changeReciter(int? value) async {
-    if (value == null) return;
-
-    await player.stop();
-
-    setState(() {
-      selectedReciter = value;
-      statusMessage = 'تم اختيار ${reciters[value].name}';
-    });
-
-    await saveSelection();
-  }
-
-  String formatDuration(Duration duration) {
-    final minutes =
-        duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds =
-        duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-
-    return '$minutes:$seconds';
   }
 
   @override
   void dispose() {
-    player.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        backgroundColor: reciterCream,
-        body: Center(
-          child: CircularProgressIndicator(
-            color: reciterGreen,
-          ),
-        ),
-      );
-    }
-
-    if (surahs.isEmpty) {
-      return Scaffold(
-        backgroundColor: reciterCream,
-        appBar: AppBar(
-          title: const Text('التلاوات القرآنية'),
-          backgroundColor: reciterForest,
-          foregroundColor: Colors.white,
-        ),
-        body: Center(child: Text(statusMessage)),
-      );
-    }
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: reciterCream,
+        backgroundColor: cream,
+
         appBar: AppBar(
-          backgroundColor: reciterForest,
+          backgroundColor: forest,
           foregroundColor: Colors.white,
-          title: const Text(
-            'التلاوات القرآنية',
-            style: TextStyle(fontWeight: FontWeight.bold),
+          elevation: 0,
+          title: const Row(
+            children: [
+              Icon(
+                Icons.menu_book_rounded,
+                color: gold,
+              ),
+              SizedBox(width: 10),
+              Text(
+                'مصحف المدينة',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          iconTheme: const IconThemeData(color: reciterGold),
+          actions: [
+            IconButton(
+              tooltip: 'الانتقال إلى صفحة',
+              onPressed: _showPagePicker,
+              icon: const Icon(
+                Icons.grid_view_rounded,
+                color: gold,
+              ),
+            ),
+          ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(18),
+
+        body: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [reciterForest, reciterGreen],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Column(
-                children: [
-                  Icon(
-                    Icons.headphones_rounded,
-                    color: reciterGold,
-                    size: 48,
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'استمع إلى القرآن الكريم',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 7),
-                  Text(
-                    'اختر قارئك المفضل واستمتع بالتلاوة',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                reverse: true,
+                itemCount: QuranPages.totalPages,
+                onPageChanged: _onPageChanged,
+                itemBuilder: (context, index) {
+                  final page = index + 1;
 
-            const SizedBox(height: 24),
-
-            const Text(
-              'اختر القارئ',
-              style: TextStyle(
-                color: reciterForest,
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-              ),
-            ),
-            const SizedBox(height: 9),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: reciterGold),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
-                  value: selectedReciter,
-                  isExpanded: true,
-                  items: List.generate(
-                    reciters.length,
-                    (index) => DropdownMenuItem(
-                      value: index,
-                      child: Text(reciters[index].name),
-                    ),
-                  ),
-                  onChanged: changeReciter,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            const Text(
-              'اختر السورة',
-              style: TextStyle(
-                color: reciterForest,
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-              ),
-            ),
-            const SizedBox(height: 9),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: reciterGold),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
-                  value: selectedSurah,
-                  isExpanded: true,
-                  items: surahs.map((surah) {
-                    return DropdownMenuItem<int>(
-                      value: surah.number,
-                      child: Text(
-                        '${surah.number}. ${surah.name}',
+                  return Container(
+                    color: cream,
+                    padding: const EdgeInsets.all(5),
+                    child: InteractiveViewer(
+                      minScale: 1,
+                      maxScale: 4,
+                      child: SizedBox.expand(
+                        child: Image.asset(
+                          QuranPages.assetPath(page),
+                          fit: BoxFit.contain,
+                          errorBuilder: (
+                            context,
+                            error,
+                            stackTrace,
+                          ) {
+                            return const Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 55,
+                                    color: forest,
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'تعذر تحميل صفحة المصحف',
+                                    style: TextStyle(
+                                      color: forest,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    );
-                  }).toList(),
-                  onChanged: changeSurah,
-                ),
+                    ),
+                  );
+                },
               ),
             ),
 
-            const SizedBox(height: 24),
-
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.fromLTRB(
+                14,
+                8,
+                14,
+                12,
+              ),
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: reciterGold.withOpacity(0.7),
+                border: Border(
+                  top: BorderSide(
+                    color: Color(0xFFE5E0D2),
+                  ),
                 ),
               ),
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.library_music_rounded,
-                    color: reciterGreen,
-                    size: 42,
-                  ),
-                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: currentPage > 1
+                            ? _previousPage
+                            : null,
+                        icon: const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                        ),
+                        color: forest,
+                        tooltip: 'الصفحة السابقة',
+                      ),
 
-                  Text(
-                    surahs[selectedSurah - 1].name,
-                    style: const TextStyle(
-                      color: reciterForest,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 23,
-                    ),
-                  ),
-
-                  const SizedBox(height: 5),
-
-                  Text(
-                    'القارئ: ${reciters[selectedReciter].name}',
-                    style: const TextStyle(
-                      color: Colors.black54,
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  StreamBuilder<Duration>(
-                    stream: player.positionStream,
-                    builder: (context, positionSnapshot) {
-                      final position =
-                          positionSnapshot.data ?? Duration.zero;
-
-                      final duration =
-                          player.duration ?? Duration.zero;
-
-                      final maxValue = duration.inMilliseconds > 0
-                          ? duration.inMilliseconds.toDouble()
-                          : 1.0;
-
-                      final currentValue = position.inMilliseconds
-                          .toDouble()
-                          .clamp(0.0, maxValue);
-
-                      return Column(
-                        children: [
-                          Slider(
-                            activeColor: reciterGreen,
-                            inactiveColor: reciterGold.withOpacity(0.3),
-                            min: 0,
-                            max: maxValue,
-                            value: currentValue,
-                            onChanged: (value) {
-                              player.seek(
-                                Duration(
-                                  milliseconds: value.round(),
-                                ),
-                              );
-                            },
+                      InkWell(
+                        onTap: _showPagePicker,
+                        borderRadius:
+                            BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 9,
                           ),
-                          Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(formatDuration(position)),
-                              Text(formatDuration(duration)),
-                            ],
+                          decoration: BoxDecoration(
+                            color: forest,
+                            borderRadius:
+                                BorderRadius.circular(12),
                           ),
-                        ],
+                          child: Text(
+                            'صفحة $currentPage من 604',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      IconButton(
+                        onPressed:
+                            currentPage < QuranPages.totalPages
+                                ? _nextPage
+                                : null,
+                        icon: const Icon(
+                          Icons.arrow_back_ios_rounded,
+                        ),
+                        color: forest,
+                        tooltip: 'الصفحة التالية',
+                      ),
+                    ],
+                  ),
+
+                  Slider(
+                    value: currentPage.toDouble(),
+                    min: 1,
+                    max: QuranPages.totalPages.toDouble(),
+                    divisions: QuranPages.totalPages - 1,
+                    activeColor: forest,
+                    inactiveColor: gold.withOpacity(0.3),
+                    onChanged: (value) {
+                      _pageController.jumpToPage(
+                        value.round() - 1,
                       );
                     },
                   ),
 
-                  const SizedBox(height: 15),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: () => player.seekToPrevious(),
-                        icon: const Icon(Icons.skip_previous_rounded),
-                        iconSize: 35,
-                        color: reciterGreen,
-                      ),
-
-                      const SizedBox(width: 15),
-
-                      StreamBuilder<PlayerState>(
-                        stream: player.playerStateStream,
-                        builder: (context, snapshot) {
-                          final state = snapshot.data;
-                          final playing = state?.playing ?? false;
-                          final loading =
-                              state?.processingState ==
-                                  ProcessingState.loading ||
-                              state?.processingState ==
-                                  ProcessingState.buffering;
-
-                          if (loading) {
-                            return const SizedBox(
-                              width: 62,
-                              height: 62,
-                              child: CircularProgressIndicator(
-                                color: reciterGreen,
-                              ),
-                            );
-                          }
-
-                          return Container(
-                            decoration: const BoxDecoration(
-                              color: reciterForest,
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              onPressed: () {
-                                if (playing) {
-                                  player.pause();
-                                } else if (state?.processingState ==
-                                    ProcessingState.completed) {
-                                  player.seek(Duration.zero);
-                                  player.play();
-                                } else if (player.audioSource == null) {
-                                  playSurah();
-                                } else {
-                                  player.play();
-                                }
-                              },
-                              icon: Icon(
-                                playing
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                color: reciterGold,
-                              ),
-                              iconSize: 42,
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(width: 15),
-
-                      IconButton(
-                        onPressed: () => player.seekToNext(),
-                        icon: const Icon(Icons.skip_next_rounded),
-                        iconSize: 35,
-                        color: reciterGreen,
-                      ),
-                    ],
+                  const Text(
+                    'اضغط على الصفحة للتكبير، واسحب للتنقل',
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            SizedBox(
-              height: 55,
-              child: ElevatedButton.icon(
-                onPressed: downloading ? null : playSurah,
-                icon: const Icon(Icons.play_circle_fill),
-                label: const Text(
-                  'تشغيل السورة كاملة',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: reciterForest,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              height: 55,
-              child: OutlinedButton.icon(
-                onPressed: downloading ? null : downloadSurah,
-                icon: const Icon(Icons.download_rounded),
-                label: Text(
-                  downloading
-                      ? 'جاري التنزيل...'
-                      : 'تنزيل السورة للاستماع دون إنترنت',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: reciterGreen,
-                  side: const BorderSide(color: reciterGreen),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-              ),
-            ),
-
-            if (downloading) ...[
-              const SizedBox(height: 14),
-              LinearProgressIndicator(
-                value: downloadProgress,
-                color: reciterGreen,
-                backgroundColor: reciterGold.withOpacity(0.3),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${(downloadProgress * 100).toStringAsFixed(0)}%',
-                textAlign: TextAlign.center
+          ],
+        ),
+      ),
+    );
+  }
+}
