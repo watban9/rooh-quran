@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -28,8 +27,7 @@ class QuranRecitersPage extends StatefulWidget {
   const QuranRecitersPage({super.key});
 
   @override
-  State<QuranRecitersPage> createState() =>
-      _QuranRecitersPageState();
+  State<QuranRecitersPage> createState() => _QuranRecitersPageState();
 }
 
 class _QuranRecitersPageState extends State<QuranRecitersPage> {
@@ -82,16 +80,25 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
 
       if (!mounted) return;
 
+      final lastReciter = prefs.getInt('lastReciter') ?? 0;
+      final lastSurah = prefs.getInt('lastAudioSurah') ?? 1;
+
       setState(() {
         surahs = loaded;
-        selectedReciter = (prefs.getInt('lastReciter') ?? 0)
-            .clamp(0, reciters.length - 1);
-        selectedSurah = (prefs.getInt('lastAudioSurah') ?? 1)
-            .clamp(1, 114);
+
+        selectedReciter = lastReciter
+            .clamp(0, reciters.length - 1)
+            .toInt();
+
+        selectedSurah = lastSurah
+            .clamp(1, loaded.length)
+            .toInt();
+
         loading = false;
       });
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         loading = false;
         statusMessage = 'تعذر تحميل بيانات القرآن';
@@ -101,6 +108,7 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
 
   Future<void> saveSelection() async {
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.setInt('lastReciter', selectedReciter);
     await prefs.setInt('lastAudioSurah', selectedSurah);
   }
@@ -129,14 +137,19 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
       ayah.ayahNumber,
     );
 
-    final file = File('${directory.path}/rooh_audio/$fileName');
+    final file = File(
+      '${directory.path}/rooh_audio/$fileName',
+    );
 
     if (await file.exists()) {
       return Uri.file(file.path);
     }
 
     return Uri.parse(
-      audioUrl(ayah.surahNumber, ayah.ayahNumber),
+      audioUrl(
+        ayah.surahNumber,
+        ayah.ayahNumber,
+      ),
     );
   }
 
@@ -146,9 +159,11 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
     try {
       await saveSelection();
 
-      setState(() {
-        statusMessage = 'جاري تجهيز التلاوة...';
-      });
+      if (mounted) {
+        setState(() {
+          statusMessage = 'جاري تجهيز التلاوة...';
+        });
+      }
 
       await player.stop();
 
@@ -162,6 +177,10 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
         sources.add(AudioSource.uri(uri));
       }
 
+      if (sources.isEmpty) {
+        throw Exception('السورة لا تحتوي على آيات');
+      }
+
       final playlist = ConcatenatingAudioSource(
         children: sources,
       );
@@ -173,7 +192,8 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
 
       setState(() {
         statusMessage =
-            'تلاوة سورة ${surah.name} بصوت ${reciters[selectedReciter].name}';
+            'تلاوة سورة ${surah.name} بصوت '
+            '${reciters[selectedReciter].name}';
       });
     } catch (e) {
       if (!mounted) return;
@@ -224,14 +244,16 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
         if (!mounted) return;
 
         setState(() {
-          downloadProgress = completed / surah.ayahs.length;
+          downloadProgress =
+              completed / surah.ayahs.length;
         });
       }
 
       if (!mounted) return;
 
       setState(() {
-        statusMessage = 'تم تنزيل سورة ${surah.name} للاستماع دون إنترنت';
+        statusMessage =
+            'تم تنزيل سورة ${surah.name} للاستماع دون إنترنت';
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -243,7 +265,8 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
       if (!mounted) return;
 
       setState(() {
-        statusMessage = 'فشل التنزيل. تحقق من اتصال الإنترنت.';
+        statusMessage =
+            'فشل التنزيل. تحقق من اتصال الإنترنت.';
       });
     } finally {
       if (mounted) {
@@ -259,9 +282,12 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
 
     await player.stop();
 
+    if (!mounted) return;
+
     setState(() {
       selectedSurah = value;
-      statusMessage = 'تم اختيار سورة ${surahs[value - 1].name}';
+      statusMessage =
+          'تم اختيار سورة ${surahs[value - 1].name}';
     });
 
     await saveSelection();
@@ -272,19 +298,27 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
 
     await player.stop();
 
+    if (!mounted) return;
+
     setState(() {
       selectedReciter = value;
-      statusMessage = 'تم اختيار ${reciters[value].name}';
+      statusMessage =
+          'تم اختيار ${reciters[value].name}';
     });
 
     await saveSelection();
   }
 
   String formatDuration(Duration duration) {
-    final minutes =
-        duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds =
-        duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final minutes = duration.inMinutes
+        .remainder(60)
+        .toString()
+        .padLeft(2, '0');
+
+    final seconds = duration.inSeconds
+        .remainder(60)
+        .toString()
+        .padLeft(2, '0');
 
     return '$minutes:$seconds';
   }
@@ -316,7 +350,9 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
           backgroundColor: reciterForest,
           foregroundColor: Colors.white,
         ),
-        body: Center(child: Text(statusMessage)),
+        body: Center(
+          child: Text(statusMessage),
+        ),
       );
     }
 
@@ -329,9 +365,13 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
           foregroundColor: Colors.white,
           title: const Text(
             'التلاوات القرآنية',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          iconTheme: const IconThemeData(color: reciterGold),
+          iconTheme: const IconThemeData(
+            color: reciterGold,
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(18),
@@ -340,7 +380,10 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [reciterForest, reciterGreen],
+                  colors: [
+                    reciterForest,
+                    reciterGreen,
+                  ],
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
                 ),
@@ -365,7 +408,9 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                   SizedBox(height: 7),
                   Text(
                     'اختر قارئك المفضل واستمتع بالتلاوة',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(
+                      color: Colors.white70,
+                    ),
                   ),
                 ],
               ),
@@ -381,10 +426,13 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                 fontSize: 17,
               ),
             ),
+
             const SizedBox(height: 9),
 
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(15),
@@ -401,7 +449,9 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                       child: Text(reciters[index].name),
                     ),
                   ),
-                  onChanged: changeReciter,
+                  onChanged: downloading
+                      ? null
+                      : changeReciter,
                 ),
               ),
             ),
@@ -416,10 +466,13 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                 fontSize: 17,
               ),
             ),
+
             const SizedBox(height: 9),
 
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(15),
@@ -437,7 +490,9 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                       ),
                     );
                   }).toList(),
-                  onChanged: changeSurah,
+                  onChanged: downloading
+                      ? null
+                      : changeSurah,
                 ),
               ),
             ),
@@ -460,6 +515,7 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                     color: reciterGreen,
                     size: 42,
                   ),
+
                   const SizedBox(height: 12),
 
                   Text(
@@ -480,7 +536,18 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+
+                  Text(
+                    statusMessage,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: reciterGreen,
+                      fontSize: 13,
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
 
                   StreamBuilder<Duration>(
                     stream: player.positionStream,
@@ -491,19 +558,23 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                       final duration =
                           player.duration ?? Duration.zero;
 
-                      final maxValue = duration.inMilliseconds > 0
-                          ? duration.inMilliseconds.toDouble()
-                          : 1.0;
+                      final maxValue =
+                          duration.inMilliseconds > 0
+                              ? duration.inMilliseconds.toDouble()
+                              : 1.0;
 
-                      final currentValue = position.inMilliseconds
+                      final currentValue = position
+                          .inMilliseconds
                           .toDouble()
-                          .clamp(0.0, maxValue);
+                          .clamp(0.0, maxValue)
+                          .toDouble();
 
                       return Column(
                         children: [
                           Slider(
                             activeColor: reciterGreen,
-                            inactiveColor: reciterGold.withOpacity(0.3),
+                            inactiveColor:
+                                reciterGold.withOpacity(0.3),
                             min: 0,
                             max: maxValue,
                             value: currentValue,
@@ -515,6 +586,7 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                               );
                             },
                           ),
+
                           Row(
                             mainAxisAlignment:
                                 MainAxisAlignment.spaceBetween,
@@ -534,8 +606,12 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        onPressed: () => player.seekToPrevious(),
-                        icon: const Icon(Icons.skip_previous_rounded),
+                        onPressed: () {
+                          player.seekToPrevious();
+                        },
+                        icon: const Icon(
+                          Icons.skip_previous_rounded,
+                        ),
                         iconSize: 35,
                         color: reciterGreen,
                       ),
@@ -546,14 +622,16 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                         stream: player.playerStateStream,
                         builder: (context, snapshot) {
                           final state = snapshot.data;
-                          final playing = state?.playing ?? false;
-                          final loading =
+                          final playing =
+                              state?.playing ?? false;
+
+                          final isLoading =
                               state?.processingState ==
                                   ProcessingState.loading ||
                               state?.processingState ==
                                   ProcessingState.buffering;
 
-                          if (loading) {
+                          if (isLoading) {
                             return const SizedBox(
                               width: 62,
                               height: 62,
@@ -572,11 +650,13 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                               onPressed: () {
                                 if (playing) {
                                   player.pause();
-                                } else if (state?.processingState ==
+                                } else if (state
+                                        ?.processingState ==
                                     ProcessingState.completed) {
                                   player.seek(Duration.zero);
                                   player.play();
-                                } else if (player.audioSource == null) {
+                                } else if (player.audioSource ==
+                                    null) {
                                   playSurah();
                                 } else {
                                   player.play();
@@ -597,8 +677,12 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                       const SizedBox(width: 15),
 
                       IconButton(
-                        onPressed: () => player.seekToNext(),
-                        icon: const Icon(Icons.skip_next_rounded),
+                        onPressed: () {
+                          player.seekToNext();
+                        },
+                        icon: const Icon(
+                          Icons.skip_next_rounded,
+                        ),
                         iconSize: 35,
                         color: reciterGreen,
                       ),
@@ -614,7 +698,9 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
               height: 55,
               child: ElevatedButton.icon(
                 onPressed: downloading ? null : playSurah,
-                icon: const Icon(Icons.play_circle_fill),
+                icon: const Icon(
+                  Icons.play_circle_fill,
+                ),
                 label: const Text(
                   'تشغيل السورة كاملة',
                   style: TextStyle(
@@ -622,49 +708,4 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                     fontSize: 16,
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: reciterForest,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              height: 55,
-              child: OutlinedButton.icon(
-                onPressed: downloading ? null : downloadSurah,
-                icon: const Icon(Icons.download_rounded),
-                label: Text(
-                  downloading
-                      ? 'جاري التنزيل...'
-                      : 'تنزيل السورة للاستماع دون إنترنت',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: reciterGreen,
-                  side: const BorderSide(color: reciterGreen),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-              ),
-            ),
-
-            if (downloading) ...[
-              const SizedBox(height: 14),
-              LinearProgressIndicator(
-                value: downloadProgress,
-                color: reciterGreen,
-                backgroundColor: reciterGold.withOpacity(0.3),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${(downloadProgress * 100).toStringAsFixed(0)}%',
-                textAlign: TextAlign.center
+                s
