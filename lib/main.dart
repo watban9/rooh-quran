@@ -82,6 +82,10 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
 
+    setState(() {
+      lastSurah = surah.number;
+    });
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -161,7 +165,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-
         body: FutureBuilder<List<QuranSurah>>(
           future: surahsFuture,
           builder: (context, snapshot) {
@@ -278,56 +281,11 @@ class _HomePageState extends State<HomePage> {
 
                 const SizedBox(height: 10),
 
-                InkWell(
+                FeatureCard(
+                  icon: Icons.menu_book_rounded,
+                  title: 'فتح مصحف المدينة',
+                  subtitle: '604 صفحة • تكبير وتصغير',
                   onTap: openMushaf,
-                  borderRadius: BorderRadius.circular(17),
-                  child: Container(
-                    padding: const EdgeInsets.all(17),
-                    decoration: BoxDecoration(
-                      color: forest,
-                      borderRadius: BorderRadius.circular(17),
-                      border: Border.all(color: gold),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.menu_book_rounded,
-                          color: gold,
-                          size: 35,
-                        ),
-                        SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'فتح مصحف المدينة',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17,
-                                ),
-                              ),
-                              SizedBox(height: 5),
-                              Text(
-                                '604 صفحة • تكبير وتصغير',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_back_ios,
-                          color: gold,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
 
                 const SizedBox(height: 18),
@@ -343,60 +301,11 @@ class _HomePageState extends State<HomePage> {
 
                 const SizedBox(height: 10),
 
-                InkWell(
+                FeatureCard(
+                  icon: Icons.headphones_rounded,
+                  title: 'القراء والتلاوات',
+                  subtitle: 'استمع إلى القراء الخمسة',
                   onTap: openReciters,
-                  borderRadius: BorderRadius.circular(17),
-                  child: Container(
-                    padding: const EdgeInsets.all(17),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(17),
-                      border: Border.all(
-                        color: gold.withOpacity(0.7),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: forest,
-                          child: Icon(
-                            Icons.headphones_rounded,
-                            color: gold,
-                          ),
-                        ),
-                        SizedBox(width: 13),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'القراء والتلاوات',
-                                style: TextStyle(
-                                  color: forest,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              SizedBox(height: 5),
-                              Text(
-                                'استمع إلى القراء الخمسة',
-                                style: TextStyle(
-                                  color: Colors.black54,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_back_ios,
-                          color: gold,
-                          size: 17,
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
 
                 const SizedBox(height: 22),
@@ -412,65 +321,19 @@ class _HomePageState extends State<HomePage> {
 
                 const SizedBox(height: 10),
 
-                InkWell(
-                  borderRadius: BorderRadius.circular(16),
+                FeatureCard(
+                  icon: Icons.bookmark_rounded,
+                  title: 'متابعة آخر قراءة',
+                  subtitle: 'العودة إلى آخر سورة قرأتها',
                   onTap: () {
-                    if (surahs.isNotEmpty) {
-                      final index = lastSurah - 1;
-                      final safeIndex =
-                          index.clamp(0, surahs.length - 1);
+                    if (surahs.isEmpty) return;
 
-                      openSurah(surahs[safeIndex]);
-                    }
+                    final index = (lastSurah - 1)
+                        .clamp(0, surahs.length - 1)
+                        .toInt();
+
+                    openSurah(surahs[index]);
                   },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: gold.withOpacity(0.6),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: forest,
-                          child: Icon(
-                            Icons.menu_book,
-                            color: gold,
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'متابعة آخر قراءة',
-                                style: TextStyle(
-                                  color: forest,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'العودة إلى آخر سورة قرأتها',
-                                style: TextStyle(
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_back_ios,
-                          color: gold,
-                          size: 16,
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
 
                 const SizedBox(height: 22),
@@ -540,6 +403,79 @@ class _HomePageState extends State<HomePage> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class FeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const FeatureCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(17),
+      child: Container(
+        padding: const EdgeInsets.all(17),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(17),
+          border: Border.all(
+            color: gold.withOpacity(0.7),
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: forest,
+              child: Icon(
+                icon,
+                color: gold,
+              ),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: forest,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_back_ios,
+              color: gold,
+              size: 17,
+            ),
+          ],
         ),
       ),
     );
@@ -651,4 +587,63 @@ class SurahPage extends StatelessWidget {
                     surah.name,
                     style: const TextStyle(
                       color: gold,
-           
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '${surah.verses} آية',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            if (surah.number != 1 && surah.number != 9)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: forest,
+                    fontSize: 23,
+                    fontWeight: FontWeight.bold,
+                    height: 2,
+                  ),
+                ),
+              ),
+
+            ...surah.ayahs.map(
+              (ayah) => Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: gold.withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  '${ayah.text} ۝${ayah.ayahNumber}',
+                  textAlign: TextAlign.justify,
+                  style: const TextStyle(
+                    color: forest,
+                    fontSize: 21,
+                    height: 2,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
