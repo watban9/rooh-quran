@@ -1,3 +1,4 @@
+
 name: rooh_quran
 description: تطبيق رَوْح للقرآن الكريم
 publish_to: 'none'
@@ -20,4 +21,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
+  assets:
+    - assets/data/
+    - assets/quran_pages/
+    - assets/audio/
+    
