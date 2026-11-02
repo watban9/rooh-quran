@@ -28,8 +28,15 @@ jobs:
       - name: Create Flutter project
         run: flutter create --project-name rooh_quran .
 
+      - name: Set App Display Name
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="رَوْح | ROOH"/' android/app/src/main/AndroidManifest.xml
+
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate App Launcher Icon
+        run: dart run flutter_launcher_icons
 
       - name: Build APK
         run: flutter build apk --release
@@ -39,4 +46,3 @@ jobs:
         with:
           name: rooh-quran-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          
