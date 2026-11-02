@@ -764,6 +764,73 @@ class _QuranRecitersPageState
                                 playing
                                     ? Icons.pause_rounded
                                     : Icons.play_arrow_rounded,
+                                
                                 color: reciterGold,
                               ),
-       
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(width: 15),
+
+                      IconButton(
+                        onPressed: () {
+                          player.seekToNext();
+                        },
+                        icon: const Icon(
+                          Icons.skip_next_rounded,
+                        ),
+                        iconSize: 35,
+                        color: reciterGreen,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed:
+                          downloading ? null : downloadSurah,
+                      icon: const Icon(
+                        Icons.download_rounded,
+                      ),
+                      label: Text(
+                        downloading
+                            ? 'جاري التنزيل...'
+                            : 'تنزيل السورة للاستماع دون إنترنت',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: reciterGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (downloading || downloadProgress > 0) ...[
+                    const SizedBox(height: 15),
+                    LinearProgressIndicator(
+                      value: downloadProgress,
+                      color: reciterGreen,
+                      backgroundColor: reciterGold.withOpacity(0.3),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      '${(downloadProgress * 100).toStringAsFixed(0)}%',
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
