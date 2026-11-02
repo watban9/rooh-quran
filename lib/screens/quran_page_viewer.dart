@@ -29,10 +29,9 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
   void initState() {
     super.initState();
 
-    currentPage = widget.initialPage.clamp(
-      1,
-      QuranPages.totalPages,
-    );
+    currentPage = widget.initialPage
+        .clamp(1, QuranPages.totalPages)
+        .toInt();
 
     _pageController = PageController(
       initialPage: currentPage - 1,
@@ -43,15 +42,13 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
 
   Future<void> _loadLastPage() async {
     final prefs = await SharedPreferences.getInstance();
-
     final savedPage = prefs.getInt('lastQuranPage');
 
     if (!mounted || savedPage == null) return;
 
-    final page = savedPage.clamp(
-      1,
-      QuranPages.totalPages,
-    );
+    final page = savedPage
+        .clamp(1, QuranPages.totalPages)
+        .toInt();
 
     setState(() {
       currentPage = page;
@@ -62,7 +59,6 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
 
   Future<void> _savePage(int page) async {
     final prefs = await SharedPreferences.getInstance();
-
     await prefs.setInt('lastQuranPage', page);
   }
 
@@ -77,10 +73,9 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
   }
 
   void _goToPage(int page) {
-    final safePage = page.clamp(
-      1,
-      QuranPages.totalPages,
-    );
+    final safePage = page
+        .clamp(1, QuranPages.totalPages)
+        .toInt();
 
     _pageController.animateToPage(
       safePage - 1,
@@ -182,7 +177,6 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: cream,
-
         appBar: AppBar(
           backgroundColor: forest,
           foregroundColor: Colors.white,
@@ -213,7 +207,6 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
             ),
           ],
         ),
-
         body: Column(
           children: [
             Expanded(
@@ -268,13 +261,9 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
                 },
               ),
             ),
-
             Container(
               padding: const EdgeInsets.fromLTRB(
-                14,
-                8,
-                14,
-                12,
+                14, 8, 14, 12,
               ),
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -300,7 +289,6 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
                         color: forest,
                         tooltip: 'الصفحة السابقة',
                       ),
-
                       InkWell(
                         onTap: _showPagePicker,
                         borderRadius:
@@ -325,7 +313,6 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
                           ),
                         ),
                       ),
-
                       IconButton(
                         onPressed:
                             currentPage < QuranPages.totalPages
@@ -339,7 +326,6 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
                       ),
                     ],
                   ),
-
                   Slider(
                     value: currentPage.toDouble(),
                     min: 1,
@@ -353,7 +339,6 @@ class _QuranPageViewerState extends State<QuranPageViewer> {
                       );
                     },
                   ),
-
                   const Text(
                     'اضغط على الصفحة للتكبير، واسحب للتنقل',
                     style: TextStyle(
