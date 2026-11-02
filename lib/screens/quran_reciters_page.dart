@@ -764,5 +764,129 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                                 playing
                                     ? Icons.pause_rounded
                                     : Icons.play_arrow_rounded,
-                                color: reciterGold,
-                      
+                                                              ),
+                              iconSize: 35,
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(width: 15),
+
+                      IconButton(
+                        onPressed: () {
+                          player.seekToNext();
+                        },
+                        icon: const Icon(
+                          Icons.skip_next_rounded,
+                        ),
+                        iconSize: 35,
+                        color: reciterGreen,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: downloading ? null : downloadSurah,
+                      icon: Icon(
+                        downloading
+                            ? Icons.downloading_rounded
+                            : Icons.download_rounded,
+                      ),
+                      label: Text(
+                        downloading
+                            ? 'جاري تنزيل السورة...'
+                            : 'تنزيل السورة للاستماع دون إنترنت',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: reciterForest,
+                        foregroundColor: reciterGold,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (downloading) ...[
+                    const SizedBox(height: 15),
+
+                    LinearProgressIndicator(
+                      value: downloadProgress,
+                      minHeight: 7,
+                      backgroundColor: reciterGold.withOpacity(0.2),
+                      color: reciterGreen,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Text(
+                      '${(downloadProgress * 100).toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                        color: reciterGreen,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    color: reciterGreen,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'يمكنك تنزيل السورة والاستماع إليها لاحقاً دون الحاجة إلى الإنترنت.',
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget dropdownContainer(Widget child) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: reciterGold.withOpacity(0.7),
+        ),
+      ),
+      child: child,
+    );
+  }
+}
