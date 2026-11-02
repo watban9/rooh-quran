@@ -63,6 +63,7 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
 
   bool loading = true;
   bool downloading = false;
+
   double downloadProgress = 0;
 
   String statusMessage = 'اختر القارئ والسورة للاستماع';
@@ -86,13 +87,11 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
       setState(() {
         surahs = loaded;
 
-        selectedReciter = lastReciter
-            .clamp(0, reciters.length - 1)
-            .toInt();
+        selectedReciter =
+            lastReciter.clamp(0, reciters.length - 1).toInt();
 
-        selectedSurah = lastSurah
-            .clamp(1, loaded.length)
-            .toInt();
+        selectedSurah =
+            lastSurah.clamp(1, loaded.length).toInt();
 
         loading = false;
       });
@@ -444,14 +443,12 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                   isExpanded: true,
                   items: List.generate(
                     reciters.length,
-                    (index) => DropdownMenuItem(
+                    (index) => DropdownMenuItem<int>(
                       value: index,
                       child: Text(reciters[index].name),
                     ),
                   ),
-                  onChanged: downloading
-                      ? null
-                      : changeReciter,
+                  onChanged: downloading ? null : changeReciter,
                 ),
               ),
             ),
@@ -490,9 +487,7 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                       ),
                     );
                   }).toList(),
-                  onChanged: downloading
-                      ? null
-                      : changeSurah,
+                  onChanged: downloading ? null : changeSurah,
                 ),
               ),
             ),
@@ -551,9 +546,9 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
 
                   StreamBuilder<Duration>(
                     stream: player.positionStream,
-                    builder: (context, positionSnapshot) {
+                    builder: (context, snapshot) {
                       final position =
-                          positionSnapshot.data ?? Duration.zero;
+                          snapshot.data ?? Duration.zero;
 
                       final duration =
                           player.duration ?? Duration.zero;
@@ -650,13 +645,11 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                               onPressed: () {
                                 if (playing) {
                                   player.pause();
-                                } else if (state
-                                        ?.processingState ==
+                                } else if (state?.processingState ==
                                     ProcessingState.completed) {
                                   player.seek(Duration.zero);
                                   player.play();
-                                } else if (player.audioSource ==
-                                    null) {
+                                } else if (player.audioSource == null) {
                                   playSurah();
                                 } else {
                                   player.play();
@@ -708,4 +701,8 @@ class _QuranRecitersPageState extends State<QuranRecitersPage> {
                     fontSize: 16,
                   ),
                 ),
-                s
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: reciterForest,
+                  foregroundColor: reciterGold,
+                  shape: RoundedRectangleBorder(
+                    bord
