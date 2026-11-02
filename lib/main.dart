@@ -1,8 +1,9 @@
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'screens/quran_page_viewer.dart';
 
 const Color forest = Color(0xFF0B3D2E);
 const Color green = Color(0xFF176B4D);
@@ -44,7 +45,7 @@ class Surah {
   final int verses;
   final String revelation;
 
-  Surah({
+  const Surah({
     required this.number,
     required this.name,
     required this.englishName,
@@ -70,10 +71,11 @@ class QuranService {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('تعذر تحميل فهرس القرآن');
+      throw Exception('تعذر تحميل فهرس السور');
     }
 
     final data = jsonDecode(response.body);
+
     return (data['data'] as List)
         .map((item) => Surah.fromJson(item))
         .toList();
@@ -102,7 +104,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late Future<List<Surah>> surahsFuture;
-  final TextEditingController searchController = TextEditingController();
+
+  final TextEditingController searchController =
+      TextEditingController();
+
   String search = '';
   int lastSurah = 1;
 
@@ -115,7 +120,9 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loadLastSurah() async {
     final prefs = await SharedPreferences.getInstance();
+
     if (!mounted) return;
+
     setState(() {
       lastSurah = prefs.getInt('lastSurah') ?? 1;
     });
@@ -125,6 +132,29 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     searchController.dispose();
     super.dispose();
+  }
+
+  void openMushaf() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const QuranPageViewer(),
+      ),
+    );
+  }
+
+  Future<void> openSurah(Surah surah) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('lastSurah', surah.number);
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SurahPage(surah: surah),
+      ),
+    );
   }
 
   @override
@@ -138,7 +168,11 @@ class _HomePageState extends State<HomePage> {
           elevation: 0,
           title: const Row(
             children: [
-              Icon(Icons.menu_book_rounded, color: gold, size: 29),
+              Icon(
+                Icons.menu_book_rounded,
+                color: gold,
+                size: 29,
+              ),
               SizedBox(width: 10),
               Text(
                 'رَوْح',
@@ -161,17 +195,30 @@ class _HomePageState extends State<HomePage> {
           ),
           actions: [
             IconButton(
+              tooltip: 'المصحف الشريف',
+              onPressed: openMushaf,
+              icon: const Icon(
+                Icons.menu_book_rounded,
+                color: gold,
+              ),
+            ),
+            IconButton(
+              tooltip: 'الإعدادات',
               onPressed: () {},
               icon: const Icon(Icons.settings_outlined),
             ),
           ],
         ),
+
         body: FutureBuilder<List<Surah>>(
           future: surahsFuture,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (snapshot.connectionState ==
+                ConnectionState.waiting) {
               return const Center(
-                child: CircularProgressIndicator(color: green),
+                child: CircularProgressIndicator(
+                  color: green,
+                ),
               );
             }
 
@@ -180,13 +227,18 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.wifi_off, size: 45, color: forest),
+                    const Icon(
+                      Icons.wifi_off,
+                      size: 45,
+                      color: forest,
+                    ),
                     const SizedBox(height: 12),
-                    const Text('تعذر الاتصال بالقرآن الكريم'),
+                    const Text('تعذر الاتصال بفهرس القرآن'),
                     TextButton(
                       onPressed: () {
                         setState(() {
-                          surahsFuture = QuranService.getSurahs();
+                          surahsFuture =
+                              QuranService.getSurahs();
                         });
                       },
                       child: const Text('إعادة المحاولة'),
@@ -197,11 +249,12 @@ class _HomePageState extends State<HomePage> {
             }
 
             final surahs = snapshot.data ?? [];
+
             final filtered = surahs.where((surah) {
               return surah.name.contains(search) ||
                   surah.englishName.toLowerCase().contains(
-                    search.toLowerCase(),
-                  ) ||
+                        search.toLowerCase(),
+                      ) ||
                   surah.number.toString() == search;
             }).toList();
 
@@ -212,19 +265,20 @@ class _HomePageState extends State<HomePage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(23),
                   decoration: BoxDecoration(
-                    color: forest,
-                    borderRadius: BorderRadius.circular(22),
-                    image: const DecorationImage(
-                      image: NetworkImage(
-                        'https://images.unsplash.com/photo-1609599006353-e629aaabfeae?w=900',
-                      ),
-                      fit: BoxFit.cover,
-                      opacity: 0.13,
+                    gradient: const LinearGradient(
+                      colors: [forest, green],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
                     ),
+                    borderRadius: BorderRadius.circular(22),
                   ),
                   child: const Column(
                     children: [
-                      Icon(Icons.auto_awesome, color: gold, size: 30),
+                      Icon(
+                        Icons.auto_awesome,
+                        color: gold,
+                        size: 30,
+                      ),
                       SizedBox(height: 12),
                       Text(
                         'وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا',
@@ -239,12 +293,82 @@ class _HomePageState extends State<HomePage> {
                       SizedBox(height: 7),
                       Text(
                         'رحلتك مع كتاب الله تبدأ من هنا',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 20),
+
+                const Text(
+                  'المصحف الشريف',
+                  style: TextStyle(
+                    color: forest,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 19,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                InkWell(
+                  onTap: openMushaf,
+                  borderRadius: BorderRadius.circular(17),
+                  child: Container(
+                    padding: const EdgeInsets.all(17),
+                    decoration: BoxDecoration(
+                      color: forest,
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(color: gold),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.menu_book_rounded,
+                          color: gold,
+                          size: 35,
+                        ),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'فتح مصحف المدينة',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                ),
+                              ),
+                              SizedBox(height: 5),
+                              Text(
+                                '604 صفحة • تكبير وتصغير',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_back_ios,
+                          color: gold,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 23),
+
                 const Text(
                   'تابع قراءتك',
                   style: TextStyle(
@@ -253,14 +377,19 @@ class _HomePageState extends State<HomePage> {
                     fontSize: 19,
                   ),
                 ),
+
                 const SizedBox(height: 10),
+
                 InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
+                    if (surahs.isEmpty) return;
+
                     final surah = surahs.firstWhere(
                       (s) => s.number == lastSurah,
                       orElse: () => surahs.first,
                     );
+
                     openSurah(surah);
                   },
                   child: Container(
@@ -268,18 +397,24 @@ class _HomePageState extends State<HomePage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: gold.withValues(alpha: 0.6)),
+                      border: Border.all(
+                        color: gold.withOpacity(0.6),
+                      ),
                     ),
                     child: const Row(
                       children: [
                         CircleAvatar(
                           backgroundColor: forest,
-                          child: Icon(Icons.menu_book, color: gold),
+                          child: Icon(
+                            Icons.menu_book,
+                            color: gold,
+                          ),
                         ),
                         SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'متابعة آخر قراءة',
@@ -289,18 +424,26 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                               Text(
-                                'اضغط للعودة إلى آخر سورة',
-                                style: TextStyle(color: Colors.black54),
+                                'العودة إلى آخر سورة قرأتها',
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        Icon(Icons.arrow_back_ios, color: gold, size: 18),
+                        Icon(
+                          Icons.arrow_back_ios,
+                          color: gold,
+                          size: 18,
+                        ),
                       ],
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 23),
+
                 const Text(
                   'القرآن الكريم',
                   style: TextStyle(
@@ -309,15 +452,22 @@ class _HomePageState extends State<HomePage> {
                     fontSize: 19,
                   ),
                 ),
+
                 const SizedBox(height: 12),
+
                 TextField(
                   controller: searchController,
                   onChanged: (value) {
-                    setState(() => search = value.trim());
+                    setState(() {
+                      search = value.trim();
+                    });
                   },
                   decoration: InputDecoration(
                     hintText: 'ابحث عن سورة أو رقمها...',
-                    prefixIcon: const Icon(Icons.search, color: green),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: green,
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
@@ -326,7 +476,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 14),
+
                 Row(
                   children: [
                     const Text(
@@ -339,11 +491,15 @@ class _HomePageState extends State<HomePage> {
                     const Spacer(),
                     Text(
                       '${filtered.length} سورة',
-                      style: const TextStyle(color: Colors.black54),
+                      style: const TextStyle(
+                        color: Colors.black54,
+                      ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 8),
+
                 ...filtered.map(
                   (surah) => SurahTile(
                     surah: surah,
@@ -354,9 +510,10 @@ class _HomePageState extends State<HomePage> {
             );
           },
         ),
+
         bottomNavigationBar: NavigationBar(
           backgroundColor: Colors.white,
-          indicatorColor: gold.withValues(alpha: 0.25),
+          indicatorColor: gold.withOpacity(0.25),
           selectedIndex: 0,
           destinations: const [
             NavigationDestination(
@@ -380,20 +537,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  Future<void> openSurah(Surah surah) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('lastSurah', surah.number);
-
-    if (!mounted) return;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SurahPage(surah: surah),
-      ),
-    );
-  }
 }
 
 class SurahTile extends StatelessWidget {
@@ -414,7 +557,9 @@ class SurahTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: gold.withValues(alpha: 0.35)),
+        side: BorderSide(
+          color: gold.withOpacity(0.35),
+        ),
       ),
       child: ListTile(
         onTap: onTap,
@@ -443,10 +588,18 @@ class SurahTile extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          '${surah.verses} آية • ${surah.revelation == 'Meccan' ? 'مكية' : 'مدنية'}',
-          style: const TextStyle(color: Colors.black54, fontSize: 12),
+          '${surah.verses} آية • '
+          '${surah.revelation == 'Meccan' ? 'مكية' : 'مدنية'}',
+          style: const TextStyle(
+            color: Colors.black54,
+            fontSize: 12,
+          ),
         ),
-        trailing: const Icon(Icons.arrow_back_ios, color: gold, size: 16),
+        trailing: const Icon(
+          Icons.arrow_back_ios,
+          color: gold,
+          size: 16,
+        ),
       ),
     );
   }
@@ -455,7 +608,10 @@ class SurahTile extends StatelessWidget {
 class SurahPage extends StatelessWidget {
   final Surah surah;
 
-  const SurahPage({super.key, required this.surah});
+  const SurahPage({
+    super.key,
+    required this.surah,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -470,14 +626,19 @@ class SurahPage extends StatelessWidget {
         body: FutureBuilder<List<dynamic>>(
           future: QuranService.getVerses(surah.number),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (snapshot.connectionState ==
+                ConnectionState.waiting) {
               return const Center(
-                child: CircularProgressIndicator(color: green),
+                child: CircularProgressIndicator(
+                  color: green,
+                ),
               );
             }
 
             if (snapshot.hasError) {
-              return const Center(child: Text('تعذر تحميل الآيات'));
+              return const Center(
+                child: Text('تعذر تحميل الآيات'),
+              );
             }
 
             final verses = snapshot.data ?? [];
@@ -493,7 +654,11 @@ class SurahPage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.auto_awesome, color: gold, size: 27),
+                      const Icon(
+                        Icons.auto_awesome,
+                        color: gold,
+                        size: 27,
+                      ),
                       const SizedBox(height: 10),
                       Text(
                         surah.name,
@@ -506,70 +671,10 @@ class SurahPage extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(
                         '${surah.verses} آية',
-                        style: const TextStyle(color: Colors.white70),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                if (surah.number != 1 && surah.number != 9)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 25),
-                    child: Text(
-                      'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        height: 2,
-                        color: forest,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ...verses.map(
-                  (verse) => Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(17),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: gold.withValues(alpha: 0.35)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          verse['text'],
-                          textAlign: TextAlign.justify,
-                          style: const TextStyle(
-                            color: forest,
-                            fontSize: 23,
-                            height: 2.1,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Align(
-                          alignment: Alignment.bottomLeft,
-                          child: CircleAvatar(
-                            radius: 15,
-                            backgroundColor: forest,
-                            child: Text(
-                              '${verse['numberInSurah']}',
-                              style: const TextStyle(
-                                color: gold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
+         
