@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/quran_page_viewer.dart';
+import 'services/quran_local_service.dart';
 
 const Color forest = Color(0xFF0B3D2E);
 const Color green = Color(0xFF176B4D);
@@ -31,67 +30,9 @@ class RoohApp extends StatelessWidget {
           primary: forest,
           secondary: gold,
         ),
-        fontFamily: 'Arial',
       ),
       home: const HomePage(),
     );
-  }
-}
-
-class Surah {
-  final int number;
-  final String name;
-  final String englishName;
-  final int verses;
-  final String revelation;
-
-  const Surah({
-    required this.number,
-    required this.name,
-    required this.englishName,
-    required this.verses,
-    required this.revelation,
-  });
-
-  factory Surah.fromJson(Map<String, dynamic> json) {
-    return Surah(
-      number: json['number'],
-      name: json['name'],
-      englishName: json['englishName'],
-      verses: json['numberOfAyahs'],
-      revelation: json['revelationType'],
-    );
-  }
-}
-
-class QuranService {
-  static Future<List<Surah>> getSurahs() async {
-    final response = await http.get(
-      Uri.parse('https://api.alquran.cloud/v1/surah'),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('تعذر تحميل فهرس السور');
-    }
-
-    final data = jsonDecode(response.body);
-
-    return (data['data'] as List)
-        .map((item) => Surah.fromJson(item))
-        .toList();
-  }
-
-  static Future<List<dynamic>> getVerses(int number) async {
-    final response = await http.get(
-      Uri.parse('https://api.alquran.cloud/v1/surah/$number'),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('تعذر تحميل السورة');
-    }
-
-    final data = jsonDecode(response.body);
-    return data['data']['ayahs'];
   }
 }
 
@@ -103,7 +44,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Future<List<Surah>> surahsFuture;
+  late Future<List<QuranSurah>> surahsFuture;
 
   final TextEditingController searchController =
       TextEditingController();
@@ -114,7 +55,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    surahsFuture = QuranService.getSurahs();
+    surahsFuture = QuranLocalService.loadSurahs();
     loadLastSurah();
   }
 
@@ -134,16 +75,7 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  void openMushaf() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const QuranPageViewer(),
-      ),
-    );
-  }
-
-  Future<void> openSurah(Surah surah) async {
+  Future<void> openSurah(QuranSurah surah) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('lastSurah', surah.number);
 
@@ -157,6 +89,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void openMushaf() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const QuranPageViewer(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -165,7 +106,6 @@ class _HomePageState extends State<HomePage> {
         appBar: AppBar(
           backgroundColor: forest,
           foregroundColor: Colors.white,
-          elevation: 0,
           title: const Row(
             children: [
               Icon(
@@ -179,10 +119,9 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(
                   fontSize: 25,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
                 ),
               ),
-              SizedBox(width: 7),
+              SizedBox(width: 8),
               Text(
                 'ROOH',
                 style: TextStyle(
@@ -202,15 +141,9 @@ class _HomePageState extends State<HomePage> {
                 color: gold,
               ),
             ),
-            IconButton(
-              tooltip: 'الإعدادات',
-              onPressed: () {},
-              icon: const Icon(Icons.settings_outlined),
-            ),
           ],
         ),
-
-        body: FutureBuilder<List<Surah>>(
+        body: FutureBuilder<List<QuranSurah>>(
           future: surahsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState ==
@@ -224,26 +157,40 @@ class _HomePageState extends State<HomePage> {
 
             if (snapshot.hasError) {
               return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.wifi_off,
-                      size: 45,
-                      color: forest,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('تعذر الاتصال بفهرس القرآن'),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          surahsFuture =
-                              QuranService.getSurahs();
-                        });
-                      },
-                      child: const Text('إعادة المحاولة'),
-                    ),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: forest,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'تعذر قراءة ملف القرآن',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'تأكد من وجود ملف القرآن داخل assets/data',
+                        textAlign: TextAlign.center,
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            surahsFuture =
+                                QuranLocalService.loadSurahs();
+                          });
+                        },
+                        child: const Text('إعادة المحاولة'),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
@@ -252,9 +199,6 @@ class _HomePageState extends State<HomePage> {
 
             final filtered = surahs.where((surah) {
               return surah.name.contains(search) ||
-                  surah.englishName.toLowerCase().contains(
-                        search.toLowerCase(),
-                      ) ||
                   surah.number.toString() == search;
             }).toList();
 
@@ -302,7 +246,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 22),
 
                 const Text(
                   'المصحف الشريف',
@@ -367,7 +311,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
 
-                const SizedBox(height: 23),
+                const SizedBox(height: 22),
 
                 const Text(
                   'تابع قراءتك',
@@ -383,14 +327,12 @@ class _HomePageState extends State<HomePage> {
                 InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
-                    if (surahs.isEmpty) return;
-
-                    final surah = surahs.firstWhere(
-                      (s) => s.number == lastSurah,
-                      orElse: () => surahs.first,
-                    );
-
-                    openSurah(surah);
+                    if (surahs.isNotEmpty) {
+                      final index = lastSurah - 1;
+                      final safeIndex =
+                          index.clamp(0, surahs.length - 1);
+                      openSurah(surahs[safeIndex]);
+                    }
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -435,14 +377,14 @@ class _HomePageState extends State<HomePage> {
                         Icon(
                           Icons.arrow_back_ios,
                           color: gold,
-                          size: 18,
+                          size: 16,
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 23),
+                const SizedBox(height: 22),
 
                 const Text(
                   'القرآن الكريم',
@@ -510,37 +452,13 @@ class _HomePageState extends State<HomePage> {
             );
           },
         ),
-
-        bottomNavigationBar: NavigationBar(
-          backgroundColor: Colors.white,
-          indicatorColor: gold.withOpacity(0.25),
-          selectedIndex: 0,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              label: 'الرئيسية',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.menu_book_outlined),
-              label: 'القرآن',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.headphones_outlined),
-              label: 'التلاوة',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.bookmark_border),
-              label: 'المحفوظات',
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
 class SurahTile extends StatelessWidget {
-  final Surah surah;
+  final QuranSurah surah;
   final VoidCallback onTap;
 
   const SurahTile({
@@ -588,8 +506,7 @@ class SurahTile extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          '${surah.verses} آية • '
-          '${surah.revelation == 'Meccan' ? 'مكية' : 'مدنية'}',
+          '${surah.verses} آية',
           style: const TextStyle(
             color: Colors.black54,
             fontSize: 12,
@@ -606,7 +523,7 @@ class SurahTile extends StatelessWidget {
 }
 
 class SurahPage extends StatelessWidget {
-  final Surah surah;
+  final QuranSurah surah;
 
   const SurahPage({
     super.key,
@@ -618,63 +535,112 @@ class SurahPage extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        backgroundColor: cream,
         appBar: AppBar(
           backgroundColor: forest,
           foregroundColor: Colors.white,
           title: Text(surah.name),
         ),
-        body: FutureBuilder<List<dynamic>>(
-          future: QuranService.getVerses(surah.number),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState ==
-                ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  color: green,
-                ),
-              );
-            }
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: forest,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.auto_awesome,
+                    color: gold,
+                    size: 27,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    surah.name,
+                    style: const TextStyle(
+                      color: gold,
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${surah.verses} آية',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-            if (snapshot.hasError) {
-              return const Center(
-                child: Text('تعذر تحميل الآيات'),
-              );
-            }
+            const SizedBox(height: 18),
 
-            final verses = snapshot.data ?? [];
-
-            return ListView(
-              padding: const EdgeInsets.all(18),
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
+            if (surah.number != 1 && surah.number != 9)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 18),
+                child: Text(
+                  'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
                     color: forest,
-                    borderRadius: BorderRadius.circular(18),
+                    fontWeight: FontWeight.bold,
+                    height: 2,
                   ),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.auto_awesome,
-                        color: gold,
-                        size: 27,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        surah.name,
-                        style: const TextStyle(
-                          color: gold,
-                          fontSize: 25,
-                          fontWeight: FontWeight.bold,
+                ),
+              ),
+
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: gold.withOpacity(0.35),
+                ),
+              ),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 7,
+                runSpacing: 12,
+                children: surah.ayahs.map((ayah) {
+                  return Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: ayah.text,
+                          style: const TextStyle(
+                            color: Color(0xFF202820),
+                            fontSize: 23,
+                            height: 2.1,
+                            fontFamily: 'serif',
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${surah.verses} آية',
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        TextSpan(
+                          text: ' ﴿${ayah.ayahNumber}﴾ ',
+                          style: const TextStyle(
+                            color: green,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-         
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                    textDirection: TextDirection.rtl,
+                  );
+                }).toList(),
+              ),
+            ),
+
+            const SizedBox(height: 25),
+          ],
+        ),
+      ),
+    );
+  }
+}
