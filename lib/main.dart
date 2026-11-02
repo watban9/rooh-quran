@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/quran_page_viewer.dart';
+import 'screens/quran_reciters_page.dart';
 import 'services/quran_local_service.dart';
 
 const Color forest = Color(0xFF0B3D2E);
@@ -98,6 +99,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void openReciters() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const QuranRecitersPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -134,6 +144,14 @@ class _HomePageState extends State<HomePage> {
           ),
           actions: [
             IconButton(
+              tooltip: 'التلاوات القرآنية',
+              onPressed: openReciters,
+              icon: const Icon(
+                Icons.headphones_rounded,
+                color: gold,
+              ),
+            ),
+            IconButton(
               tooltip: 'المصحف الشريف',
               onPressed: openMushaf,
               icon: const Icon(
@@ -143,6 +161,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+
         body: FutureBuilder<List<QuranSurah>>(
           future: surahsFuture,
           builder: (context, snapshot) {
@@ -311,6 +330,75 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
 
+                const SizedBox(height: 18),
+
+                const Text(
+                  'الاستماع إلى القرآن',
+                  style: TextStyle(
+                    color: forest,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 19,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                InkWell(
+                  onTap: openReciters,
+                  borderRadius: BorderRadius.circular(17),
+                  child: Container(
+                    padding: const EdgeInsets.all(17),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(
+                        color: gold.withOpacity(0.7),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: forest,
+                          child: Icon(
+                            Icons.headphones_rounded,
+                            color: gold,
+                          ),
+                        ),
+                        SizedBox(width: 13),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'القراء والتلاوات',
+                                style: TextStyle(
+                                  color: forest,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              SizedBox(height: 5),
+                              Text(
+                                'استمع إلى القراء الخمسة',
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_back_ios,
+                          color: gold,
+                          size: 17,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 22),
 
                 const Text(
@@ -331,6 +419,7 @@ class _HomePageState extends State<HomePage> {
                       final index = lastSurah - 1;
                       final safeIndex =
                           index.clamp(0, surahs.length - 1);
+
                       openSurah(surahs[safeIndex]);
                     }
                   },
@@ -562,85 +651,4 @@ class SurahPage extends StatelessWidget {
                     surah.name,
                     style: const TextStyle(
                       color: gold,
-                      fontSize: 25,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${surah.verses} آية',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            if (surah.number != 1 && surah.number != 9)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 18),
-                child: Text(
-                  'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    color: forest,
-                    fontWeight: FontWeight.bold,
-                    height: 2,
-                  ),
-                ),
-              ),
-
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: gold.withOpacity(0.35),
-                ),
-              ),
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 7,
-                runSpacing: 12,
-                children: surah.ayahs.map((ayah) {
-                  return Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: ayah.text,
-                          style: const TextStyle(
-                            color: Color(0xFF202820),
-                            fontSize: 23,
-                            height: 2.1,
-                            fontFamily: 'serif',
-                          ),
-                        ),
-                        TextSpan(
-                          text: ' ﴿${ayah.ayahNumber}﴾ ',
-                          style: const TextStyle(
-                            color: green,
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    textAlign: TextAlign.center,
-                    textDirection: TextDirection.rtl,
-                  );
-                }).toList(),
-              ),
-            ),
-
-            const SizedBox(height: 25),
-          ],
-        ),
-      ),
-    );
-  }
-}
+           
